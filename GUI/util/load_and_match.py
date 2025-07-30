@@ -71,7 +71,7 @@ def extract_hyperlinks(filepath, target_col):
             hyperlinks.append(url)
             ws.cell(row=i, column=new_col_index, value=url)
 
-        wb.save(filepath)
+        wb.close()
         print("🔗 Injected Extracted Hyperlink column into Excel.")
         print(f"🖇️ First 5 extracted hyperlinks: {hyperlinks[:5]}")
         return hyperlinks
