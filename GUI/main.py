@@ -22,7 +22,7 @@ def main():
     def safe_doc_path_browse(entry_field):
         file_path = filedialog.askopenfilename(
             title="Select Document",
-            filetypes=[("Excel files", "*.xlsx"), ("CSV files", "*.csv"), ("All files", "*.*")]
+            filetypes=[("All files", "*.*")]
         )
         if file_path:
             entry_field.delete(0, "end")
