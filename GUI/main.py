@@ -9,7 +9,8 @@ def main():
     root.grid_columnconfigure(0, weight=1)
     root.grid_rowconfigure(2, weight=1)
 
-    result_container = None  # Will store the reference to the container frame
+    result_container = None
+    tree = None
 
     def check_doc_entries():
         if first_doc_entry.get().strip() and second_doc_entry.get().strip():
@@ -27,21 +28,13 @@ def main():
             entry_field.insert(0, file_path)
         check_doc_entries()
 
-    def display_merged_data(merged_df):
-        nonlocal result_container
-
-        if result_container:
-            result_container.destroy()
+    def init_empty_table():
+        nonlocal result_container, tree
 
         result_container = CTkFrame(root, fg_color="#2b2b2b", corner_radius=10, height=260)
-        result_container.grid(row=2, column=0, columnspan=2, padx=20, pady=20, sticky="n")
+        result_container.grid(row=2, column=0, columnspan=2, padx=20, pady=20, sticky="new")
         result_container.grid_propagate(False)
 
-        if merged_df is None or merged_df.empty:
-            messagebox.showinfo("No Matches", "No matching records found.")
-            return
-
-        # Setup dark theme for Treeview
         style = ttk.Style()
         style.theme_use("default")
         style.configure("Treeview", background="#1e1e1e", foreground="white", fieldbackground="#1e1e1e", rowheight=30)
@@ -51,16 +44,9 @@ def main():
         tree_frame.pack(fill="both", expand=True)
 
         tree = ttk.Treeview(tree_frame, show="headings", height=7)
-
-        display_columns = merged_df.columns
-        tree["columns"] = list(display_columns)
-
-        for col in display_columns:
-            tree.heading(col, text=col)
-            tree.column(col, width=200, anchor="w")  # Wider default to force horizontal scroll
-
-        for _, row in merged_df.iterrows():
-            tree.insert("", "end", values=[row[col] for col in display_columns])
+        tree["columns"] = ["Empty"]
+        tree.heading("Empty", text="No Data Yet")
+        tree.column("Empty", width=200, anchor="w")
 
         vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
         hsb = ttk.Scrollbar(tree_frame, orient="horizontal", command=tree.xview)
@@ -71,6 +57,24 @@ def main():
         hsb.grid(row=1, column=0, sticky="ew")
         tree_frame.grid_rowconfigure(0, weight=1)
         tree_frame.grid_columnconfigure(0, weight=1)
+
+    def display_merged_data(merged_df):
+        nonlocal tree
+
+        if merged_df is None or merged_df.empty:
+            messagebox.showinfo("No Matches", "No matching records found.")
+            return
+
+        tree.delete(*tree.get_children())  # Clear previous rows
+
+        tree["columns"] = list(merged_df.columns)
+
+        for col in merged_df.columns:
+            tree.heading(col, text=col)
+            tree.column(col, width=200, anchor="w")
+
+        for _, row in merged_df.iterrows():
+            tree.insert("", "end", values=[row[col] for col in merged_df.columns])
 
     def on_configure_click():
         if first_doc_entry.get().strip() and second_doc_entry.get().strip():
@@ -103,6 +107,8 @@ def main():
         state="disabled",
     )
     configure_button.grid(row=0, column=1, padx=(10, 10), pady=(30,20), sticky="nesw")
+
+    init_empty_table()
 
     root.mainloop()
 
