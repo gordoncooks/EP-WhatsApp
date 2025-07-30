@@ -5,7 +5,7 @@ from util.load_and_match import load_and_match_documents
 def main():
     root = CTk()
     root.title("EP WhatsApp")
-    root.geometry("1024x700")
+    root.geometry("800x700")
     root.grid_columnconfigure(0, weight=1)
     root.grid_rowconfigure(2, weight=1)
 
@@ -81,17 +81,17 @@ def main():
 
     # === Document Entry Section ===
     doc_path_section = CTkFrame(root)
-    doc_path_section.grid(row=0, column=0, padx=(20, 20), pady=(20, 10), sticky="w")
+    doc_path_section.grid(row=0, column=0, padx=(20, 10), pady=(20, 10), sticky="ew")
 
     CTkLabel(doc_path_section, text="First Document:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
-    first_doc_entry = CTkEntry(doc_path_section, width=300)
-    first_doc_entry.grid(row=0, column=1, padx=5, pady=5)
+    first_doc_entry = CTkEntry(doc_path_section, width=325)
+    first_doc_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
     first_doc_entry.bind("<KeyRelease>", lambda e: check_doc_entries())
     CTkButton(doc_path_section, text="Browse", command=lambda: safe_doc_path_browse(first_doc_entry)).grid(row=0, column=2, padx=5, pady=10)
 
     CTkLabel(doc_path_section, text="Second Document:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
-    second_doc_entry = CTkEntry(doc_path_section, width=300)
-    second_doc_entry.grid(row=1, column=1, padx=5, pady=5)
+    second_doc_entry = CTkEntry(doc_path_section, width=325)
+    second_doc_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
     second_doc_entry.bind("<KeyRelease>", lambda e: check_doc_entries())
     CTkButton(doc_path_section, text="Browse", command=lambda: safe_doc_path_browse(second_doc_entry)).grid(row=1, column=2, padx=5, pady=10)
 
@@ -101,10 +101,8 @@ def main():
         text="Configure\nDocuments",
         command=on_configure_click,
         state="disabled",
-        width=150,
-        height=80
     )
-    configure_button.grid(row=0, column=1, padx=(10, 10), pady=20, sticky="nesw")
+    configure_button.grid(row=0, column=1, padx=(10, 10), pady=(30,20), sticky="nesw")
 
     root.mainloop()
 
