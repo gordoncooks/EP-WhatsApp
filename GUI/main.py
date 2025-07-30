@@ -83,6 +83,8 @@ def main():
             display_merged_data(merged_df)
             if merged_df is not None and not merged_df.empty:
                 test_message_button.configure(state="normal")
+                send_button.configure(state="normal")
+
         else:
             messagebox.showinfo("Missing Document", "Please select both documents before continuing.")
 
@@ -181,6 +183,7 @@ def main():
     send_button = CTkButton(
         root,
         text="Start Sending",
+        state="disabled",
         command=on_send_click
     )
     send_button.grid(row=5, column=0, columnspan=2, padx=(20, 20), pady=(0, 10), sticky="ew")
