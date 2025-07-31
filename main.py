@@ -1,6 +1,7 @@
 from customtkinter import CTk, CTkLabel, CTkEntry, CTkButton, CTkFrame, CTkTextbox
 from tkinter import filedialog, messagebox, ttk
 from GUI.util.load_and_match import load_and_match_documents
+from WhatsApp.util.whatsapp_launcher import wait_for_whatsapp_login
 
 def main():
     root = CTk()
@@ -104,9 +105,9 @@ def main():
             replacements = {
                 "{name}": str(row.get("Owner Name", "[name]")),
                 "{address}": str(row.get("Street Address_x", "[address]")),
-                "R" + "{price}": str(row.get("Price", "[price]")),
+                "{price}": str(row.get("Price", "[price]")),
                 "{views}": str(row.get("All Views", "[views]")),
-                "{market_days}": str(row.get("List Date", "[market_days]")),
+                "{market_days}": str(row.get("Time On Market", "[market_days]")),
                 "{enquiries}": "0",  # if you don’t have a field yet
                 "{hyperlink}": str(row.get("Extracted Hyperlink", "[hyperlink]")),
             }
@@ -178,7 +179,7 @@ def main():
 
     # === Start Sending Button ===
     def on_send_click():
-        print("Sending...")
+        wait_for_whatsapp_login()
 
     send_button = CTkButton(
         root,

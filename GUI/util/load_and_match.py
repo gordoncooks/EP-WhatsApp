@@ -76,39 +76,39 @@ def extract_hyperlinks(filepath, target_col):
         print(f"🖇️ First 5 extracted hyperlinks: {hyperlinks[:5]}")
         return hyperlinks
     except Exception as e:
-        print(f"⚠️ Failed to extract and inject hyperlinks: {e}")
+        print(f"Failed to extract and inject hyperlinks: {e}")
         return None
 
 def load_and_match_documents(file1_path, file2_path):
     try:
-        print(f"\n📂 Attempting to load files:")
+        print(f"\nAttempting to load files:")
         print(f" - File 1: {file1_path}")
         print(f" - File 2: {file2_path}")
 
         df1 = read_file(file1_path)
         df2 = read_file(file2_path)
-        print("✅ Files loaded successfully.")
+        print("Files loaded successfully.")
 
         # Try column detection
         p24_col, listing_col = find_matching_columns(df1, df2)
 
         if not p24_col or not listing_col:
-            print("🔁 Attempting fallback: swap file roles")
+            print("Attempting fallback: swap file roles")
             p24_col, listing_col = find_matching_columns(df2, df1)
             if not p24_col or not listing_col:
                 raise ValueError("Matching columns not found in either direction.")
             df1, df2 = df2, df1
             file1_path, file2_path = file2_path, file1_path
 
-        print(f"🧾 DATA1 Columns: {list(df1.columns)}")
-        print(f"🧾 DATA2 Columns: {list(df2.columns)}")
-        print(f"🔗 Matching '{p24_col}' (DATA1) with '{listing_col}' (DATA2)")
+        print(f"DATA1 Columns: {list(df1.columns)}")
+        print(f"DATA2 Columns: {list(df2.columns)}")
+        print(f"Matching '{p24_col}' (DATA1) with '{listing_col}' (DATA2)")
 
         df1[p24_col] = clean_listing_column(df1[p24_col])
         df2[listing_col] = clean_listing_column(df2[listing_col])
 
-        print("🧪 First 5 values in DATA1:", df1[p24_col].dropna().unique()[:5])
-        print("🧪 First 5 values in DATA2:", df2[listing_col].dropna().unique()[:5])
+        print("First 5 values in DATA1:", df1[p24_col].dropna().unique()[:5])
+        print("First 5 values in DATA2:", df2[listing_col].dropna().unique()[:5])
 
         # Extract hyperlinks if Excel and applicable
         if file1_path.lower().endswith(".xlsx") and "p24" in p24_col.lower():
@@ -116,13 +116,13 @@ def load_and_match_documents(file1_path, file2_path):
             if hyperlinks and len(hyperlinks) == len(df1):
                 df1["Extracted Hyperlink"] = hyperlinks
             else:
-                print("⚠️ No hyperlinks were extracted or lengths didn't match.")
+                print("No hyperlinks were extracted or lengths didn't match.")
 
         merged_df = pd.merge(df1, df2, left_on=p24_col, right_on=listing_col, how="inner")
-        print(f"✅ Match complete. {len(merged_df)} records matched.")
+        print(f"Match complete. {len(merged_df)} records matched.")
         return merged_df
 
     except Exception as e:
-        print(f"❌ Error occurred: {e}")
+        print(f"Error occurred: {e}")
         messagebox.showerror("Merge Failed", f"An error occurred while matching the documents:\n\n{str(e)}")
         return None
