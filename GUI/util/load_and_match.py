@@ -79,6 +79,29 @@ def extract_hyperlinks(filepath, target_col):
         print(f"Failed to extract and inject hyperlinks: {e}")
         return None
 
+def clean_contact_number(num):
+    """Cleans and validates a South African phone number"""
+    if pd.isna(num) or str(num).strip() == "":
+        return None
+
+    # Convert to string and remove common separators
+    num = str(num).strip()
+    num_cleaned = num.replace(" ", "").replace("-", "").replace(".", "").replace("(", "").replace(")", "")
+
+    # Normalize SA numbers
+    if num_cleaned.startswith("0"):
+        num_cleaned = "+27" + num_cleaned[1:]
+    elif num_cleaned.startswith("+27"):
+        num_cleaned = num_cleaned  # already normalized
+    else:
+        return None
+
+    # Must have at least 11 characters
+    if len(num_cleaned) < 11:
+        return None
+
+    return num_cleaned
+
 def load_and_match_documents(file1_path, file2_path):
     try:
         print(f"\nAttempting to load files:")
@@ -120,6 +143,28 @@ def load_and_match_documents(file1_path, file2_path):
 
         merged_df = pd.merge(df1, df2, left_on=p24_col, right_on=listing_col, how="inner")
         print(f"Match complete. {len(merged_df)} records matched.")
+
+        # Clean contact numbers
+        contact_col = "Owner Contact Numbers"
+        rejected_numbers = []
+
+        if contact_col in merged_df.columns:
+
+            def validate_and_track(num):
+                cleaned = clean_contact_number(num)
+                if cleaned is None and pd.notna(num) and str(num).strip() != "":
+                    rejected_numbers.append(str(num).strip())
+                return cleaned
+
+            merged_df[contact_col] = merged_df[contact_col].apply(validate_and_track)
+
+            # Drop rows with no valid numbers
+            merged_df = merged_df.dropna(subset=[contact_col]).reset_index(drop=True)
+            
+            print(f"Rejected numbers: {rejected_numbers}")
+        else:
+            print("⚠️ 'Owner Contact Numbers' column not found in merged data.")
+
         return merged_df
 
     except Exception as e:
