@@ -1,7 +1,6 @@
 import pandas as pd
 import os
 from tkinter import messagebox
-from openpyxl import load_workbook
 
 def detect_header_row(df):
     """Detects the most likely header row"""
@@ -43,60 +42,22 @@ def clean_listing_column(series):
         .str[0]
     )
 
-def extract_hyperlinks(filepath, target_col):
-    try:
-        wb = load_workbook(filepath)
-        ws = wb.active
-
-        # Find header row containing target_col
-        header_row_idx = None
-        for i, row in enumerate(ws.iter_rows(min_row=1, max_row=10), start=1):
-            headers = [cell.value for cell in row]
-            if headers and target_col in headers:
-                header_row_idx = i
-                break
-
-        if header_row_idx is None:
-            print(f"⚠️ Column '{target_col}' not found for hyperlink extraction.")
-            return None
-
-        col_idx = headers.index(target_col) + 1
-        new_col_index = ws.max_column + 1
-        ws.cell(row=header_row_idx, column=new_col_index, value="Extracted Hyperlink")
-
-        hyperlinks = []
-        for i, row in enumerate(ws.iter_rows(min_row=header_row_idx + 1, max_row=ws.max_row), start=header_row_idx + 1):
-            cell = row[col_idx - 1]
-            url = cell.hyperlink.target if cell.hyperlink else None
-            hyperlinks.append(url)
-            ws.cell(row=i, column=new_col_index, value=url)
-
-        wb.close()
-        print("🔗 Injected Extracted Hyperlink column into Excel.")
-        print(f"🖇️ First 5 extracted hyperlinks: {hyperlinks[:5]}")
-        return hyperlinks
-    except Exception as e:
-        print(f"Failed to extract and inject hyperlinks: {e}")
-        return None
-
+# Optional: Keep phone number cleaning if you want to re-enable it later
 def clean_contact_number(num):
     """Cleans and validates a South African phone number"""
     if pd.isna(num) or str(num).strip() == "":
         return None
 
-    # Convert to string and remove common separators
     num = str(num).strip()
     num_cleaned = num.replace(" ", "").replace("-", "").replace(".", "").replace("(", "").replace(")", "")
 
-    # Normalize SA numbers
     if num_cleaned.startswith("0"):
         num_cleaned = "+27" + num_cleaned[1:]
     elif num_cleaned.startswith("+27"):
-        num_cleaned = num_cleaned  # already normalized
+        num_cleaned = num_cleaned
     else:
         return None
 
-    # Must have at least 11 characters
     if len(num_cleaned) < 11:
         return None
 
@@ -133,23 +94,23 @@ def load_and_match_documents(file1_path, file2_path):
         print("First 5 values in DATA1:", df1[p24_col].dropna().unique()[:5])
         print("First 5 values in DATA2:", df2[listing_col].dropna().unique()[:5])
 
-        # Extract hyperlinks if Excel and applicable
-        if file1_path.lower().endswith(".xlsx") and "p24" in p24_col.lower():
-            hyperlinks = extract_hyperlinks(file1_path, p24_col)
-            if hyperlinks and len(hyperlinks) == len(df1):
-                df1["Extracted Hyperlink"] = hyperlinks
-            else:
-                print("No hyperlinks were extracted or lengths didn't match.")
-
+        # Merge the dataframes
         merged_df = pd.merge(df1, df2, left_on=p24_col, right_on=listing_col, how="inner")
         print(f"Match complete. {len(merged_df)} records matched.")
 
-        # Clean contact numbers
+        # Generate hyperlinks dynamically
+        base_url = "http://www.property24.com/General/RedirectToListing?listingNumber="
+        merged_df["Extracted Hyperlink"] = merged_df[p24_col].apply(lambda x: base_url + str(x))
+
+        print("✅ Generated hyperlinks dynamically instead of Excel extraction.")
+        print("Sample hyperlinks:", merged_df["Extracted Hyperlink"].head().tolist())
+
+        # Optional: Phone cleaning logic (currently commented out)
+        """
         contact_col = "Owner Contact Numbers"
         rejected_numbers = []
 
         if contact_col in merged_df.columns:
-
             def validate_and_track(num):
                 cleaned = clean_contact_number(num)
                 if cleaned is None and pd.notna(num) and str(num).strip() != "":
@@ -157,13 +118,12 @@ def load_and_match_documents(file1_path, file2_path):
                 return cleaned
 
             merged_df[contact_col] = merged_df[contact_col].apply(validate_and_track)
-
-            # Drop rows with no valid numbers
             merged_df = merged_df.dropna(subset=[contact_col]).reset_index(drop=True)
             
             print(f"Rejected numbers: {rejected_numbers}")
         else:
             print("⚠️ 'Owner Contact Numbers' column not found in merged data.")
+        """
 
         return merged_df
 

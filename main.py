@@ -1,7 +1,7 @@
 from customtkinter import CTk, CTkLabel, CTkEntry, CTkButton, CTkFrame, CTkTextbox
 from tkinter import filedialog, messagebox, ttk
 from GUI.util.load_and_match import load_and_match_documents
-from WhatsApp.util.whatsapp_launcher import wait_for_whatsapp_login
+from WhatsApp.util.whatsapp_launcher import start_whatsapp_sending  # <== We'll implement this in the WhatsApp script
 
 def main():
     root = CTk()
@@ -12,7 +12,7 @@ def main():
 
     result_container = None
     tree = None
-    merged_df = None  # store reference for test message
+    merged_df = None  # store reference for sending
 
     def check_doc_entries():
         if first_doc_entry.get().strip() and second_doc_entry.get().strip():
@@ -85,7 +85,6 @@ def main():
             if merged_df is not None and not merged_df.empty:
                 test_message_button.configure(state="normal")
                 send_button.configure(state="normal")
-
         else:
             messagebox.showinfo("Missing Document", "Please select both documents before continuing.")
 
@@ -95,31 +94,41 @@ def main():
     def populate_test_message(df):
         if df is not None and not df.empty:
             row = df.iloc[0]
-
-            # Get the message template from the textbox
             template = message_input.get("1.0", "end").strip()
 
-            print(df.columns.tolist())
-
-            # Replace placeholders with actual row data (use actual column names)
             replacements = {
                 "{name}": str(row.get("Owner Name", "[name]")),
                 "{address}": str(row.get("Street Address_x", "[address]")),
                 "{price}": str(row.get("Price", "[price]")),
                 "{views}": str(row.get("All Views", "[views]")),
                 "{market_days}": str(row.get("Time On Market", "[market_days]")),
-                "{enquiries}": "0",  # if you don’t have a field yet
+                "{enquiries}": "0",
                 "{hyperlink}": str(row.get("Extracted Hyperlink", "[hyperlink]")),
             }
 
-            # Perform the replacements
             for tag, value in replacements.items():
                 template = template.replace(tag, value)
 
-            # Show the filled message
             messagebox.showinfo("Test Message Preview", template)
 
-    # === Document Entry Section ===
+    def on_send_click():
+        nonlocal merged_df
+        if merged_df is None or merged_df.empty:
+            messagebox.showinfo("No Data", "Please configure documents first.")
+            return
+
+        template = message_input.get("1.0", "end").strip()
+        if not template:
+            messagebox.showinfo("No Message", "Please enter a message before sending.")
+            return
+
+        # Call WhatsApp automation script and pass dataframe + template
+        completed = start_whatsapp_sending(merged_df, template)
+
+        if completed:
+            messagebox.showinfo("Sending Completed", "All WhatsApp messages have been sent successfully!")
+
+    # === GUI Layout ===
     doc_path_section = CTkFrame(root)
     doc_path_section.grid(row=0, column=0, padx=(20, 0), pady=(20, 5), sticky="ew")
 
@@ -135,16 +144,9 @@ def main():
     second_doc_entry.bind("<KeyRelease>", lambda e: check_doc_entries())
     CTkButton(doc_path_section, text="Browse", command=lambda: safe_doc_path_browse(second_doc_entry)).grid(row=1, column=2, padx=5, pady=10)
 
-    # === Configure Button ===
-    configure_button = CTkButton(
-        root,
-        text="Configure\nDocuments",
-        command=on_configure_click,
-        state="disabled",
-    )
+    configure_button = CTkButton(root, text="Configure\nDocuments", command=on_configure_click, state="disabled")
     configure_button.grid(row=0, column=1, padx=(10, 20), pady=(30, 20), sticky="nesw")
 
-    # === Tag Buttons Section ===
     messagSection = CTkFrame(root, fg_color="#2b2b2b", corner_radius=10, height=50)
     messagSection.grid(row=1, column=0, columnspan=2, padx=(20, 20), pady=(5, 5), sticky="ew")
     messagSection.grid_columnconfigure((0, 1, 2, 3, 4, 5, 6), weight=1)
@@ -157,7 +159,6 @@ def main():
     CTkButton(messagSection, text="Enquiries", command=lambda: insert_tag("{enquiries}")).grid(row=0, column=5, padx=2, pady=5, sticky="ew")
     CTkButton(messagSection, text="Hyperlink", command=lambda: insert_tag("{hyperlink}")).grid(row=0, column=6, padx=(2, 4), pady=5, sticky="ew")
 
-    # === Message Input ===
     message_input = CTkTextbox(root, width=800, height=100, fg_color="#1e1e1e", text_color="white", wrap="word")
     message_input.grid(row=2, column=0, columnspan=2, padx=(20, 20), pady=(5, 5), sticky="ew")
 
@@ -168,25 +169,10 @@ def main():
     )
     message_input.insert("1.0", default_message)
 
-    # === Test Message Button ===
-    test_message_button = CTkButton(
-        root,
-        text="Test Message",
-        state="disabled",
-        command=lambda: populate_test_message(merged_df)
-    )
+    test_message_button = CTkButton(root, text="Test Message", state="disabled", command=lambda: populate_test_message(merged_df))
     test_message_button.grid(row=4, column=0, columnspan=2, padx=(20, 20), pady=(0, 5), sticky="ew")
 
-    # === Start Sending Button ===
-    def on_send_click():
-        wait_for_whatsapp_login()
-
-    send_button = CTkButton(
-        root,
-        text="Start Sending",
-        state="disabled",
-        command=on_send_click
-    )
+    send_button = CTkButton(root, text="Start Sending", state="disabled", command=on_send_click)
     send_button.grid(row=5, column=0, columnspan=2, padx=(20, 20), pady=(0, 10), sticky="ew")
 
     init_empty_table()
