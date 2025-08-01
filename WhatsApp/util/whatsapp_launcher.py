@@ -3,6 +3,7 @@ import random
 import pyautogui
 import tkinter as tk
 from tkinter import messagebox
+import pandas as pd
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -15,13 +16,29 @@ import pyperclip
 # =========================
 
 def wait_for_whatsapp_login():
-    """Launch WhatsApp Web in Selenium and wait for user login."""
-    options = webdriver.ChromeOptions()
-    options.add_argument("--start-maximized")
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    """Launch WhatsApp Web in Selenium using bundled Chrome + Chromedriver, wait for user login."""
+    import os
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.chrome.options import Options
 
+    # Paths relative to the exe folder
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    driver_path = os.path.join(base_dir, "chromedriver.exe")
+    chrome_path = os.path.join(base_dir, "chrome-portable", "chrome.exe")
+
+    # Configure Chrome options
+    options = Options()
+    options.binary_location = chrome_path
+    options.add_argument("--start-maximized")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-gpu")
+
+    # Start Chrome using bundled driver and portable Chrome
+    service = Service(driver_path)
+    driver = webdriver.Chrome(service=service, options=options)
     driver.get("https://web.whatsapp.com")
-    print("Opening WhatsApp Web...")
+    print("Opening WhatsApp Web in bundled portable Chrome...")
 
     # Popup to confirm login
     root = tk.Tk()
@@ -34,9 +51,9 @@ def wait_for_whatsapp_login():
         else:
             print("Waiting for user to sign in...")
 
-    # Click window to focus
-    pyautogui.click()
+    pyautogui.click()  # Focus window
     return driver
+
 
 
 def type_like_human(text, min_delay=0.01, max_delay=0.03):
@@ -86,20 +103,64 @@ def open_new_chat_shortcut(delay=0.1):
 
 
 def fill_message_template(template, row):
-    """Replace placeholders in the template with actual row values."""
+    """Replace placeholders in the template with actual row values and log for debugging."""
+    import pandas as pd
+
+    def safe_int(value, col_name):
+        """Convert value to int safely, handling strings, NaNs, and spaces."""
+        if pd.isna(value):
+            print(f"[DEBUG] {col_name} is NaN, treating as 0")
+            return 0
+        try:
+            cleaned = str(value).replace(" ", "").replace(",", "")
+            print(f"[DEBUG] {col_name} raw='{value}' cleaned='{cleaned}'")
+            return int(cleaned)
+        except ValueError:
+            print(f"[DEBUG] {col_name} value='{value}' could not convert, treating as 0")
+            return 0
+
+    # Calculate total enquiries by summing relevant columns
+    total_enquiries = (
+        safe_int(row.get("All Contact Form (SMS)", 0), "All Contact Form (SMS)")
+        + safe_int(row.get("All Number Viewed", 0), "All Number Viewed")
+        + safe_int(row.get("All Email Viewed", 0), "All Email Viewed")
+    )
+    print(f"[DEBUG] Calculated total_enquiries = {total_enquiries} for row {row.get('Street Address_x', '[No Address]')}")
+
+    # get name of the contact
+    name = str(row.get("Owner Name", "")).strip()
+
+    # make name title case
+    name = name.title()
+    name_parts = name.split(" ")
+    name = name_parts[0]
+
+    price_val = row.get("Price", 0)
+
+    # Convert to numeric safely
+    try:
+        price_num = float(str(price_val).replace("R", "").replace(" ", "").replace("\u00A0", ""))
+    except ValueError:
+        price_num = 0
+
+    # Format as South African currency with non-breaking spaces
+    price = "R {:,.0f}".format(price_num).replace(",", "\u00A0")
+
     replacements = {
-        "{name}": str(row.get("Owner Name", "[name]")),
+        "{name}": str(name),
         "{address}": str(row.get("Street Address_x", "[address]")),
-        "{price}": str(row.get("Price", "[price]")),
+        "{price}": str(price),
         "{views}": str(row.get("All Views", "[views]")),
         "{market_days}": str(row.get("Time On Market", "[market_days]")),
-        "{enquiries}": "0",
+        "{enquiries}": str(total_enquiries),
         "{hyperlink}": str(row.get("Extracted Hyperlink", "[hyperlink]")),
     }
 
     for tag, value in replacements.items():
         template = template.replace(tag, value)
+
     return template
+
 
 
 # =========================
@@ -134,21 +195,13 @@ def start_whatsapp_sending(merged_df, template):
                 print(f"Skipping row {idx}: Contact number is NaN")
                 continue
 
-            # get name of the contact
-            name = str(row.get("Owner Name", "")).strip()
-
-            # make name title case
-            name = name.title()
-            name_parts = name.split(" ")
-            name = name_parts[0]
-
             # Step 1: Open new chat
             open_new_chat_shortcut()
             time.sleep(2)
 
             # Step 2: Type phone number
             type_like_human(number)
-            time.sleep(1)
+            time.sleep(2)
             pyautogui.press('enter')  # Open chat
             print(f"Opened chat with {number}")
 

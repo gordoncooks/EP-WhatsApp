@@ -5,6 +5,8 @@ build/
 dist/
 wheels/
 *.egg-info
+/WhatsApp/util/chromedriver.exe
+/WhatsApp/util/chrome-portable
 
 # Virtual environments
 .venv
