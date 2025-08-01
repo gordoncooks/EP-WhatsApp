@@ -1,0 +1,12 @@
+run in cmd
+
+.venv\Scripts\activate.bat
+
+uv run pyinstaller ^
+    --onefile ^
+    --noconsole ^
+    --name "EP-WhatsApp" ^
+    --icon "Logo.ico" ^
+    --add-data "WhatsApp/util/chromedriver.exe;WhatsApp/util" ^
+    --add-data "WhatsApp/util/chrome-portable;WhatsApp/util/chrome-portable" ^
+    main.py
